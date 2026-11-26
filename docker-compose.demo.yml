@@ -1,0 +1,19 @@
+# Demo override: point the API at generated FAKE data (node api/testdata/make-demo.mjs).
+# Runs beside the real dashboard: web on 127.0.0.1:3001, API not published, own accounts in api/testdata/demo/config.
+services:
+  api:
+    environment:
+      # never upload the fake data to a real VPS, even when .env has these set
+      VPS_URL: ""
+      VPS_SYNC_TOKEN: ""
+      VPS_REMOTE_CONTROL: ""
+      REQUESTS_DIR: ""
+    volumes: !override
+      - ./api/testdata/demo:/data:ro
+      # demo accounts, chat, profiles, visits (make-demo.mjs creates the folder writable for the container's user)
+      - ./api/testdata/demo/config:/config
+    ports: !reset []
+
+  web:
+    ports: !override
+      - "127.0.0.1:3001:3000"

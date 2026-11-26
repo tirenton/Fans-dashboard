@@ -1,0 +1,40 @@
+# Private dashboard over the prototype's captures. Never contacts FANS; reads files, and writes only requests/PULL.
+# FANS_DATA_DIR = the folder holding captures/, log.jsonl and STOP (see .env.example).
+# API_TOKEN and SESSION_SECRET must be set in .env (see .env.example); accounts live in ./config/users.json and are
+# managed with: docker compose -p nmixx-fans run --rm -it api user add <name> <admin|user>
+services:
+  api:
+    build: ./api
+    environment:
+      DATA_DIR: /data
+      REQUESTS_DIR: /requests
+      USERS_FILE: /config/users.json
+      API_TOKEN: ${API_TOKEN:?set API_TOKEN in .env}
+      # keep a VPS dashboard up to date (api/push.go); both empty = off. The probe itself is never involved.
+      VPS_URL: ${VPS_URL:-}
+      VPS_SYNC_TOKEN: ${VPS_SYNC_TOKEN:-}
+      # 1 = carry out the orders given on the VPS Admin page (start, pause, settings, log in to FANS, resume, pull)
+      VPS_REMOTE_CONTROL: ${VPS_REMOTE_CONTROL:-}
+    volumes:
+      - ${FANS_DATA_DIR:-./prototype-playwright-session}:/data:ro
+      # the only writable mount: "Pull now" drops requests/PULL here for the prototype's loop to pick up
+      - ${FANS_DATA_DIR:-./prototype-playwright-session}/requests:/requests
+      # dashboard accounts (argon2id hashes); written only by the "api user" command
+      - ./config:/config
+    # never publish this port when deploying: only the web app talks to the API
+    ports:
+      - "127.0.0.1:8080:8080"
+    restart: unless-stopped
+
+  web:
+    build: ./web
+    environment:
+      API_URL: http://api:8080
+      API_TOKEN: ${API_TOKEN:?set API_TOKEN in .env}
+      SESSION_SECRET: ${SESSION_SECRET:?set SESSION_SECRET in .env}
+      COOKIE_SECURE: ${COOKIE_SECURE:-}
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      - api
+    restart: unless-stopped

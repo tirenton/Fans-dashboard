@@ -1,0 +1,17 @@
+# secrets
+.env
+.env.*
+!.env.example
+*.token
+# local data
+*.db
+*.sqlite*
+# python
+__pycache__/
+.venv/
+venv/
+api/testdata/demo/
+# dashboard accounts (password hashes)
+config/
+# the VPS's uploaded data when testing docker-compose.vps.yml locally
+data/

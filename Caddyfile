@@ -1,0 +1,17 @@
+# HTTPS in front of the dashboard on the VPS (docker-compose.vps.yml). Caddy gets and renews the certificate for
+# DOMAIN by itself; the domain's DNS must point at the VPS, with ports 80 and 443 open.
+{$DOMAIN} {
+	encode zstd gzip
+	# uploads from the home PC: a capture is ~0.2 MB, an image a few MB
+	request_body {
+		max_size 30MB
+	}
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy same-origin
+		-Server
+	}
+	reverse_proxy web:3000
+}

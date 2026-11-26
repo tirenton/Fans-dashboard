@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+<title>AxisMixx</title>
+<!-- logo: a blue whale with a water spout, on the site's dark surface --><defs>
+<linearGradient id="b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4f9bff"/><stop offset="1" stop-color="#1f5fd1"/></linearGradient></defs>
+<rect width="64" height="64" rx="14" fill="#161618"/>
+<path d="M7 39C7 28 16 21 28 21c11 0 18 5 21 12l5-7c1.5-2 4.5-1.2 4.3 1.3L57 35l3.6 4.2c1.6 1.9-.3 4.6-2.6 3.8L51 40.5C47.5 47 39.5 51 29 51 16 51 7 46.5 7 39z" fill="url(#b)"/>
+<path d="M9.5 42.5C13 47 20 49.5 29 49.5c8 0 14.5-2.5 18.4-6.6C40 45 33 45.6 26 45 19 44.4 13.6 43.8 9.5 42.5z" fill="#cfe3ff"/>
+<circle cx="18" cy="35" r="2.4" fill="#0b1a33"/><circle cx="18.8" cy="34.2" r=".8" fill="#fff"/>
+<path d="M22 17c-1.5-3-1-6 0-8M22 17c1.5-2.8 4-4.3 6.5-4.6M22 17c-2.2-2-5-2.6-7.4-2" fill="none" stroke="#8cc4ff" stroke-width="2.4" stroke-linecap="round"/>
+</svg>

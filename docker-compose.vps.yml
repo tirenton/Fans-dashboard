@@ -1,0 +1,62 @@
+# The dashboard on a VPS. The probe stays on the home PC (account safety: FANS keeps seeing the home connection),
+# and the PC's own dashboard API (api/push.go, VPS_URL in the PC's .env) sends captures, images, log.jsonl and STOP here.
+# While the PC is off the dashboard stays up, showing everything up to the last upload.
+#
+# .env on the VPS: DOMAIN, API_TOKEN, SESSION_SECRET, SYNC_TOKEN (see .env.example). Then:
+#   mkdir -p data config && sudo chown -R 65532:65532 data config     # the containers run as uid 65532
+#   docker compose -f docker-compose.vps.yml -p nmixx-stats up -d --build
+#   docker compose -f docker-compose.vps.yml -p nmixx-stats run --rm -it api user add <name> admin
+services:
+  api:
+    build: ./api
+    environment:
+      DATA_DIR: /data
+      USERS_FILE: /config/users.json
+      API_TOKEN: ${API_TOKEN:?set API_TOKEN in .env}
+      SYNC_ENABLED: "1" # accept uploads from the home PC (only through the web app, with SYNC_TOKEN)
+      # sign-up and password reset by email: on once BREVO_API_KEY and MAIL_FROM are set in .env
+      SITE_URL: https://${DOMAIN}
+      BREVO_API_KEY: ${BREVO_API_KEY:-}
+      MAIL_FROM: ${MAIL_FROM:-}
+      # no REQUESTS_DIR: the probe's controls live on the home PC
+    volumes:
+      - ${VPS_DATA_DIR:-./data}:/data
+      - ./config:/config
+    restart: unless-stopped
+
+  web:
+    build: ./web
+    environment:
+      API_URL: http://api:8080
+      API_TOKEN: ${API_TOKEN:?set API_TOKEN in .env}
+      SESSION_SECRET: ${SESSION_SECRET:?set SESSION_SECRET in .env}
+      SYNC_TOKEN: ${SYNC_TOKEN:?set SYNC_TOKEN in .env}
+      # the Admin page and Pull now: orders the home PC collects (when its .env has VPS_REMOTE_CONTROL=1); 0 hides them
+      PROBE_CONTROLS: ${PROBE_CONTROLS:-1}
+      COOKIE_SECURE: ${COOKIE_SECURE:-1}
+      # optional Cloudflare Turnstile check on the sign-up form (both keys, from dash.cloudflare.com)
+      TURNSTILE_SITE_KEY: ${TURNSTILE_SITE_KEY:-}
+      TURNSTILE_SECRET_KEY: ${TURNSTILE_SECRET_KEY:-}
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2.8.4-alpine
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN in .env}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - web
+    restart: unless-stopped
+
+volumes:
+  caddy-data:
+  caddy-config:
