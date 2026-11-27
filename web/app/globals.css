@@ -688,3 +688,125 @@ kbd {
 .vt-track { height: 10px; }
 .vt-bar { display: block; height: 10px; min-width: 2px; border-radius: 0 4px 4px 0; background: var(--accent); }
 .vt-n { font-variant-numeric: tabular-nums; color: var(--text-secondary); min-width: 3ch; text-align: right; }
+
+/* Trans-Am: while the probe's fast mode runs, components/trans-am.tsx sets <html data-transam> ("on", or "test" for
+   a test run) and the whole site glows pure red: a pulsing light around the screen's edges, a red haze behind the
+   page, the accent, the name and the cards' borders turn red, and a badge with the time left sits in the top bar. */
+html[data-transam] {
+  --accent: #ff2a2a;
+  --ta-core: #ff1414;
+  --ta-hot: #ff3b3b;
+}
+html[data-transam] body {
+  background:
+    radial-gradient(1100px 620px at 50% -12%, rgba(255, 10, 10, 0.26), transparent 70%),
+    radial-gradient(800px 520px at 100% 105%, rgba(220, 0, 0, 0.16), transparent 70%),
+    radial-gradient(700px 480px at 0% 100%, rgba(255, 10, 10, 0.12), transparent 70%),
+    var(--page);
+  background-attachment: fixed;
+}
+html[data-transam] body::before {
+  content: ""; position: fixed; inset: 0; z-index: 60; pointer-events: none;
+  box-shadow: inset 0 0 70px 8px rgba(255, 0, 0, 0.5), inset 0 0 180px 40px rgba(200, 0, 0, 0.2);
+  animation: ta-pulse 2.2s ease-in-out infinite;
+}
+@keyframes ta-pulse { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
+html[data-transam] .topbar {
+  border-bottom-color: rgba(255, 20, 20, 0.65);
+  box-shadow: 0 1px 28px rgba(255, 0, 0, 0.38);
+}
+html[data-transam] .brand-name {
+  background-image: linear-gradient(100deg, #ff9a8f 0%, #ff1f1f 30%, #fff1ee 50%, #ff1f1f 70%, #ff9a8f 100%);
+  filter: drop-shadow(0 0 12px rgba(255, 0, 0, 0.8));
+  animation-duration: 2.4s;
+}
+html[data-transam] .brand-logo { filter: hue-rotate(147deg) saturate(2.2) drop-shadow(0 0 10px rgba(255, 0, 0, 0.9)); }
+html[data-transam] .card {
+  border-color: rgba(255, 20, 20, 0.32);
+  box-shadow: 0 0 22px rgba(255, 0, 0, 0.11);
+}
+html[data-transam] .chip[aria-current="true"] { background: var(--ta-hot); border-color: var(--ta-hot); color: #1a0000; }
+/* a test run glows the same, a little softer, so a real one still stands out */
+html[data-transam="test"] body::before { box-shadow: inset 0 0 60px 6px rgba(255, 0, 0, 0.36), inset 0 0 160px 30px rgba(200, 0, 0, 0.14); }
+
+.ta-badge {
+  display: inline-flex; align-items: center; gap: 6px; flex: none;
+  padding: 3px 10px; border-radius: 999px;
+  font-size: 11px; font-weight: 800; letter-spacing: 0.14em; color: #fff;
+  background: linear-gradient(90deg, #a80000, var(--ta-core), #ff4a3a);
+  box-shadow: 0 0 12px rgba(255, 0, 0, 0.85), 0 0 28px rgba(255, 0, 0, 0.5);
+  text-shadow: 0 0 6px rgba(255, 255, 255, 0.6);
+  animation: ta-badge 1.1s ease-in-out infinite;
+}
+@keyframes ta-badge { 0%, 100% { box-shadow: 0 0 10px rgba(255, 0, 0, 0.75), 0 0 22px rgba(255, 0, 0, 0.38); } 50% { box-shadow: 0 0 16px rgba(255, 40, 30, 1), 0 0 38px rgba(255, 0, 0, 0.65); } }
+.ta-test { font-size: 9px; letter-spacing: 0.1em; padding: 1px 5px; border-radius: 999px; background: rgba(0, 0, 0, 0.35); }
+.ta-left { font-variant-numeric: tabular-nums; letter-spacing: 0.02em; font-weight: 700; opacity: 0.9; }
+@media (max-width: 640px) { .ta-left, .ta-test { display: none; } }
+@media (prefers-reduced-motion: reduce) {
+  html[data-transam] body::before, .ta-badge { animation: none; }
+  html[data-transam] body::before { opacity: 0.85; }
+}
+
+/* Trans-Am side lights (components/trans-am.tsx SideLights): red circuit lines in the empty space beside the page,
+   a different random tangle on each side. The page column is 1120px wide, so each side starts 20px outside it and is at most 300px.
+   Hidden when the sides are too narrow to hold them. */
+.ta-sides { position: fixed; inset: 64px 0 16px; pointer-events: none; z-index: 0; }
+.ta-side { position: absolute; top: 0; bottom: 0; width: min(300px, calc(50vw - 600px)); }
+.ta-side svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.ta-side-left { right: calc(50% + 580px); }
+.ta-side-right { left: calc(50% + 580px); }
+@media (max-width: 1359px) { .ta-sides { display: none; } }
+.ta-side path { fill: none; stroke-width: 1.6; stroke-linecap: square; stroke-linejoin: bevel; vector-effect: non-scaling-stroke; }
+.ta-dim path { stroke: rgba(255, 16, 16, 0.2); }
+.ta-lit { filter: drop-shadow(0 0 2px #ff0000) drop-shadow(0 0 8px rgba(255, 0, 0, 0.85)) drop-shadow(0 0 18px rgba(220, 0, 0, 0.45)); }
+.ta-lit path { stroke: #ff1f1f; stroke-dasharray: 1; stroke-dashoffset: 1; animation: ta-trace 3.6s cubic-bezier(0.4, 0, 0.2, 1) infinite; }
+.ta-lit rect { fill: #ff4a3a; opacity: 0; animation: ta-node 3.6s ease-in-out infinite; }
+/* a trace lights up from the page's edge outward, holds, then runs off and goes dark */
+@keyframes ta-trace {
+  0% { stroke-dashoffset: 1; opacity: 0.35; }
+  30% { stroke-dashoffset: 0; opacity: 1; }
+  62% { stroke-dashoffset: 0; opacity: 1; }
+  100% { stroke-dashoffset: -1; opacity: 0.2; }
+}
+@keyframes ta-node { 0%, 100% { opacity: 0; } 15%, 45% { opacity: 1; } }
+html[data-transam="test"] .ta-lit { opacity: 0.8; }
+@media (prefers-reduced-motion: reduce) {
+  .ta-lit path { animation: none; stroke-dashoffset: 0; opacity: 0.75; }
+  .ta-lit rect { animation: none; opacity: 0.75; }
+}
+
+/* Trans-Am "advance" look (components/trans-am.tsx PageVeins): tapered blood vessels behind the whole page, 150 bpm
+   (0.4 s a beat). Lub-dub: two beats close together, then a rest; at each the vessels flush and the screen's edge glow
+   beats. A bright copy of the vessels shows only inside rings of light that leave the mouse pointer every beat (lub,
+   then dub 72 px behind) at 900 px a second and fade out with distance: a repeating ring mask whose radius --ta-r runs
+   0 -> 360 px each beat, centred on --mx/--my (the pointer, set by the component). It scrolls with the page and sits
+   behind it: z-index -1 under the page's own content, so cards cover it. */
+@property --ta-r { syntax: "<length>"; inherits: false; initial-value: 0px; }
+.ta-page-veins { position: absolute; top: 0; left: 0; z-index: -1; pointer-events: none; overflow: visible; }
+.ta-page-veins path { stroke: none; fill: #a3000c; }
+.ta-vessels { filter: drop-shadow(0 0 2px rgba(255, 0, 0, 0.55)); will-change: opacity; animation: ta-flush 0.4s ease-in-out infinite; }
+@keyframes ta-flush { 0% { opacity: 0.4; } 10% { opacity: 0.8; } 20% { opacity: 0.5; } 30% { opacity: 0.7; } 45%, 100% { opacity: 0.35; } }
+.ta-veins-lit path { fill: #ff5a3c; }
+.ta-veins-lit {
+  --mx: 50%; --my: 50%;
+  filter: drop-shadow(0 0 3px #ff2a10) drop-shadow(0 0 10px rgba(255, 0, 0, 0.9));
+  -webkit-mask-image:
+    repeating-radial-gradient(circle at var(--mx) var(--my), transparent var(--ta-r), rgba(0, 0, 0, 0.7) calc(var(--ta-r) + 14px), transparent calc(var(--ta-r) + 34px), transparent calc(var(--ta-r) + 52px), #000 calc(var(--ta-r) + 76px), #000 calc(var(--ta-r) + 92px), transparent calc(var(--ta-r) + 124px), transparent calc(var(--ta-r) + 360px)),
+    radial-gradient(circle at var(--mx) var(--my), #000 0, #000 300px, transparent 1500px);
+  mask-image:
+    repeating-radial-gradient(circle at var(--mx) var(--my), transparent var(--ta-r), rgba(0, 0, 0, 0.7) calc(var(--ta-r) + 14px), transparent calc(var(--ta-r) + 34px), transparent calc(var(--ta-r) + 52px), #000 calc(var(--ta-r) + 76px), #000 calc(var(--ta-r) + 92px), transparent calc(var(--ta-r) + 124px), transparent calc(var(--ta-r) + 360px)),
+    radial-gradient(circle at var(--mx) var(--my), #000 0, #000 300px, transparent 1500px);
+  -webkit-mask-composite: source-in;
+  mask-composite: intersect;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  animation: ta-ring 0.4s linear infinite;
+}
+@keyframes ta-ring { from { --ta-r: 0px; } to { --ta-r: 360px; } }
+html[data-ta-style="advance"] body::before { animation: ta-heart 0.4s ease-in-out infinite; }
+@keyframes ta-heart { 0% { opacity: 0.45; } 10% { opacity: 1; } 20% { opacity: 0.55; } 30% { opacity: 0.9; } 45%, 100% { opacity: 0.4; } }
+@media (max-width: 1359px) { .ta-page-veins { display: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .ta-vessels, .ta-veins-lit, html[data-ta-style="advance"] body::before { animation: none; }
+  .ta-veins-lit { -webkit-mask-image: none; mask-image: none; opacity: 0.25; }
+}

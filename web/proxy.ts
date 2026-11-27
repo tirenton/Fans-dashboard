@@ -7,6 +7,7 @@ import { allows, SESSION_COOKIE, verifySession, type Role } from "@/lib/session"
 const PUBLIC = new Set([
   "/", "/login", "/api/auth/login", "/api/auth/logout", "/api/fan-minutes", "/api/fan-days",
   "/api/visit", // the visitor counter's page-view report (admins read the totals on /api/visits)
+  "/api/transam", // whether the probe's Trans-Am is running, for the site-wide glow (nothing else)
   // signing up and resetting a password by email (lib/accounts.ts)
   "/signup", "/confirm", "/forgot", "/reset", "/api/auth/signup", "/api/auth/confirm", "/api/auth/forgot", "/api/auth/reset",
 ]);

@@ -129,6 +129,16 @@ The collector writes `status.json` (alive, waiting or reading, why it last stopp
 `launcher.json` (the supervisor that restarts it after a crash). The API passes these to the Admin page, which polls
 every 5 s.
 
+**While a Trans-Am runs, the whole site glows red** for every visitor (`web/components/trans-am.tsx`), driven by a public
+`GET /api/transam` that reveals only whether one is running and until when. The site gets:
+- a pulsing edge glow, a red name, logo and buttons, and a badge with the time left;
+- on wide screens, random red circuit traces beside the page.
+
+The Admin page has two buttons to try this without touching FANS. Each runs one minute of pretend readings:
+- **Test** shows the normal look.
+- **Advance test** shows tapered blood vessels behind the whole page, beating at 150 bpm, with rings of light pulsing
+  out from the mouse pointer.
+
 ### PC → VPS sync and remote control
 
 The PC's API already reads the capture folder, so it also uploads it to the VPS (`api/push.go` on the PC,

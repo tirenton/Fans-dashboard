@@ -343,7 +343,18 @@ func main() {
 		}
 		writeJSON(w, readAdmin())
 	})
-	// Stop / Restart the loop, start or cancel Trans-Am: {command: quit | restart | transam | transam-cancel}
+	// public: is a Trans-Am running (the site glows while it is)? Only {active, test, until}.
+	mux.HandleFunc("GET /api/transam", func(w http.ResponseWriter, r *http.Request) {
+		now := time.Now()
+		if remote != nil {
+			a := remote.Admin(now)
+			writeJSON(w, CurrentTransAm(a.Probe, a.Alive, now))
+			return
+		}
+		p, alive := ReadProbe(dataDir, now)
+		writeJSON(w, CurrentTransAm(p, alive, now))
+	})
+	// Stop / Restart the loop, start, test or cancel Trans-Am: {command: quit | restart | transam | transam-test | transam-cancel}
 	mux.HandleFunc("POST /api/admin/loop", func(w http.ResponseWriter, r *http.Request) {
 		var body struct {
 			Command string `json:"command"`

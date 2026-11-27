@@ -249,10 +249,13 @@ function TransAmCard({ a, now, busy, onLoop }: { a: Admin; now: number; busy: bo
   const pending = a.loopPending?.find((c) => c.startsWith("transam"));
   const b = a.budget;
   const left = b ? Math.min(b.hourCap - b.lastHour, b.dayCap - b.lastDay) : 0;
-  const passes = Math.max(0, Math.min(TRANSAM_MAX_PASSES, left - TRANSAM_RESERVE));
+  // two limits: what 5 minutes fit (~40 s a round) and what the budget leaves after the reserve; say which one applies
+  const byBudget = Math.max(0, left - TRANSAM_RESERVE);
+  const passes = Math.min(TRANSAM_MAX_PASSES, byBudget);
   const blocked = a.control.paused || p.state === "login";
   const until = active ? Date.parse(t!.until!) : NaN;
-  const pct = active && t!.startedAt ? Math.min(100, Math.max(0, ((now - Date.parse(t!.startedAt)) / TRANSAM_MS) * 100)) : 0;
+  const total = active && t!.startedAt ? until - Date.parse(t!.startedAt) : TRANSAM_MS; // a test run is shorter
+  const pct = active && t!.startedAt ? Math.min(100, Math.max(0, ((now - Date.parse(t!.startedAt)) / total) * 100)) : 0;
   return (
     <section className={`card section${active ? " banner good" : ""}`}>
       <div style={{ width: "100%" }}>
@@ -261,7 +264,7 @@ function TransAmCard({ a, now, busy, onLoop }: { a: Admin; now: number; busy: bo
           <>
             <div className="countdown">
               <div className="countdown-row">
-                <span><strong>TRANS-AM</strong> · {until > now ? <><strong>{clock(until - now)}</strong> left</> : "finishing"}</span>
+                <span><strong>TRANS-AM</strong>{t!.test && <> ({t!.style === "advance" ? "advance test" : "test"}: pretend passes, no FANS requests)</>} · {until > now ? <><strong>{clock(until - now)}</strong> left</> : "finishing"}</span>
                 <span>{t!.passes} pass{t!.passes === 1 ? "" : "es"} so far</span>
               </div>
               <div className="progress" role="progressbar" aria-label="Trans-Am time used" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(pct)}>
@@ -283,22 +286,35 @@ function TransAmCard({ a, now, busy, onLoop }: { a: Admin; now: number; busy: bo
               stops early to keep {TRANSAM_RESERVE} requests for the passes after it.
             </p>
             <div className="filters" style={{ marginBottom: 0 }}>
-              <button className="chip" aria-current="true" disabled={busy || !a.enabled || blocked || passes < 1 || pending === "transam"}
+              <button className="chip" aria-current="true" disabled={busy || !a.enabled || blocked || passes < 1 || !!pending}
                 onClick={() => onLoop("transam")}>
                 {pending === "transam" ? "Starting…" : "Start Trans-Am"}
               </button>
+              <button className="chip" disabled={busy || !a.enabled || blocked || !!pending} onClick={() => onLoop("transam-test")}
+                title="One minute of pretend passes: the glow, countdown and pass count, with no Chrome and no requests to FANS">
+                {pending === "transam-test" ? "Starting test…" : "Test"}
+              </button>
+              <button className="chip" disabled={busy || !a.enabled || blocked || !!pending} onClick={() => onLoop("transam-advance")}
+                title="The same one-minute test, shown with pumping blood vessels instead of circuit lines">
+                {pending === "transam-advance" ? "Starting…" : "Advance test"}
+              </button>
               <span className="muted small">
-                {pending === "transam" ? (p.state === "passing" ? "Right after the current pass." : "Within a few seconds.")
+                {pending ? (p.state === "passing" ? "Right after the current pass." : "Within a few seconds.")
                   : blocked ? "Not while paused or logging in."
-                  : passes < 1 ? "Not enough request budget left this hour; try again later."
-                  : `Budget for about ${passes} pass${passes === 1 ? "" : "es"} now.`}
+                  : passes < 1 ? "Not enough request budget left this hour; try again later (Test still works)."
+                  : byBudget >= TRANSAM_MAX_PASSES
+                    ? `About ${TRANSAM_MAX_PASSES} passes in 5 minutes (the budget would allow ${byBudget}).`
+                    : `About ${passes} pass${passes === 1 ? "" : "es"}: the hour's request budget runs out first.`}
               </span>
             </div>
+            <p className="muted small" style={{ margin: "6px 0 0" }}>
+              Test runs one minute of pretend passes, so you can see the glow and the countdown without using FANS. Advance test is the same, with pumping blood vessels instead of circuit lines.
+            </p>
           </>
         )}
         {!active && t && t.endedAt && (
           <p className="small muted" style={{ margin: "8px 0 0" }}>
-            Last Trans-Am: {t.passes} pass{t.passes === 1 ? "" : "es"}, ended at {hhmm(Date.parse(t.endedAt))} ({t.reason}).
+            Last Trans-Am{t.test ? (t.style === "advance" ? " advance test" : " test") : ""}: {t.passes} pass{t.passes === 1 ? "" : "es"}, ended at {hhmm(Date.parse(t.endedAt))} ({t.reason}).
           </p>
         )}
       </div>

@@ -4,6 +4,7 @@ import type { ProfileInfo } from "@/components/avatar";
 import { Account, AutoRefresh, Nav, VisitBeacon } from "@/components/client";
 import { api } from "@/lib/api";
 import { SearchPalette } from "@/components/search";
+import { TransAmGlow } from "@/components/trans-am";
 import { getSession } from "@/lib/auth";
 import { probeControls } from "@/lib/features";
 import { SITE_URL } from "@/lib/site";
@@ -38,6 +39,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               <span className="brand-name">AxisMixx</span>
               <span className="brand-sub">NMIXX FANS statistics</span>
             </a>
+            <TransAmGlow />
             <Nav role={session?.role} controls={probeControls()} />
             {session?.role === "admin" && <SearchPalette />}
             <AutoRefresh seconds={60} />

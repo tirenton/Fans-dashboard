@@ -70,8 +70,10 @@ export type TransAm = {
   endedAt?: string;
   reason?: string;
   passes: number;
+  test?: boolean; // a test run: pretend passes, no FANS requests
+  style?: "advance"; // shown with veins instead of circuits
 };
-export type LoopCommand = "quit" | "restart" | "transam" | "transam-cancel";
+export type LoopCommand = "quit" | "restart" | "transam" | "transam-cancel" | "transam-test" | "transam-advance";
 /** launcher.mjs, the supervisor on the PC that starts the loop and brings it back after a crash. */
 export type Launcher = {
   retryAt?: string;

@@ -167,3 +167,55 @@ func TestStatusAndLauncherDetails(t *testing.T) {
 		t.Fatalf("budget caps missing: %+v", a.Budget)
 	}
 }
+
+func TestCurrentTransAmForTheGlow(t *testing.T) {
+	data, req := adminDirs(t)
+	now := time.Date(2026, 11, 27, 12, 0, 0, 0, time.UTC)
+	write := func(updated, until string, active bool) {
+		os.WriteFile(filepath.Join(data, "status.json"), []byte(`{"state":"waiting","updatedAt":"`+updated+`",
+			"transAm":{"active":`+map[bool]string{true: "true", false: "false"}[active]+`,"test":true,"until":"`+until+`","passes":1}}`), 0o644)
+	}
+	glow := func() TransAmNow { p, alive := ReadProbe(data, now); return CurrentTransAm(p, alive, now) }
+	write("2026-11-27T11:59:55Z", "2026-11-27T12:00:40Z", true)
+	if got := glow(); !got.Active || !got.Test || got.Until == nil {
+		t.Fatalf("a running test Trans-Am: %+v", got)
+	}
+	write("2026-11-27T11:50:00Z", "2026-11-27T12:00:40Z", true) // the loop stopped reporting: no glow
+	if got := glow(); got.Active {
+		t.Fatalf("stale status must not glow: %+v", got)
+	}
+	write("2026-11-27T11:59:55Z", "2026-11-27T11:58:00Z", true) // long past its end
+	if got := glow(); got.Active {
+		t.Fatalf("an expired Trans-Am must not glow: %+v", got)
+	}
+	write("2026-11-27T11:59:55Z", "2026-11-27T12:00:40Z", false)
+	if got := glow(); got.Active {
+		t.Fatalf("an ended Trans-Am must not glow: %+v", got)
+	}
+	if err := RequestLoop(req, "transam-test"); err != nil {
+		t.Fatal(err)
+	}
+	if b, _ := os.ReadFile(filepath.Join(req, "TRANSAM")); string(b) != "test\n" {
+		t.Fatalf("TRANSAM holds %q", b)
+	}
+}
+
+func TestAdvanceTestCarriesItsStyle(t *testing.T) {
+	data, req := adminDirs(t)
+	if err := RequestLoop(req, "transam-advance"); err != nil {
+		t.Fatal(err)
+	}
+	if b, _ := os.ReadFile(filepath.Join(req, "TRANSAM")); string(b) != "test-advance\n" {
+		t.Fatalf("TRANSAM holds %q", b)
+	}
+	if got := ReadAdmin(data, req, time.Now()).LoopPending; len(got) != 1 || got[0] != "transam-advance" {
+		t.Fatalf("pending: %v", got)
+	}
+	now := time.Date(2026, 11, 27, 12, 0, 0, 0, time.UTC)
+	os.WriteFile(filepath.Join(data, "status.json"), []byte(`{"state":"waiting","updatedAt":"2026-11-27T11:59:55Z",
+		"transAm":{"active":true,"test":true,"style":"advance","until":"2026-11-27T12:00:40Z","passes":0}}`), 0o644)
+	p, alive := ReadProbe(data, now)
+	if got := CurrentTransAm(p, alive, now); !got.Active || got.Style != "advance" {
+		t.Fatalf("the glow should know the style: %+v", got)
+	}
+}

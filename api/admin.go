@@ -59,6 +59,8 @@ type TransAm struct {
 	EndedAt   *time.Time `json:"endedAt,omitempty"`
 	Reason    string     `json:"reason,omitempty"`
 	Passes    int        `json:"passes"`
+	Test      bool       `json:"test,omitempty"`  // a test run: pretend passes, no FANS requests
+	Style     string     `json:"style,omitempty"` // "advance": the dashboard shows veins instead of circuits
 }
 
 // LauncherExit is how the loop the launcher watched last ended.
@@ -114,10 +116,12 @@ type Admin struct {
 // quit ends the loop (it stays off), restart ends it for launcher.mjs to start again (new code), transam starts the
 // fast mode and transam-cancel ends it. The file's text is what the loop reads.
 var loopCommands = map[string]struct{ file, text string }{
-	"quit":           {"QUIT", "quit"},
-	"restart":        {"RESTART", "restart"},
-	"transam":        {"TRANSAM", "start"},
-	"transam-cancel": {"TRANSAM", "cancel"},
+	"quit":            {"QUIT", "quit"},
+	"restart":         {"RESTART", "restart"},
+	"transam":         {"TRANSAM", "start"},
+	"transam-cancel":  {"TRANSAM", "cancel"},
+	"transam-test":    {"TRANSAM", "test"},         // pretend passes for a minute: tries the display, no FANS requests
+	"transam-advance": {"TRANSAM", "test-advance"}, // the same test, with the veins look
 }
 
 var ErrUnknownLoopCommand = errors.New("unknown loop command")
@@ -140,7 +144,7 @@ func pendingLoop(reqDir string) []string {
 	if reqDir == "" {
 		return out
 	}
-	for _, cmd := range []string{"quit", "restart", "transam", "transam-cancel"} {
+	for _, cmd := range []string{"quit", "restart", "transam", "transam-cancel", "transam-test", "transam-advance"} {
 		c := loopCommands[cmd]
 		if b, err := os.ReadFile(filepath.Join(reqDir, c.file)); err == nil && strings.TrimSpace(string(b)) == c.text {
 			out = append(out, cmd)
@@ -218,23 +222,48 @@ func ReadControl(reqDir string) Control {
 	return c
 }
 
+// ReadProbe reads the loop's status.json, and whether it was refreshed recently (see Admin.Alive).
+func ReadProbe(dataDir string, now time.Time) (*ProbeStatus, bool) {
+	b, err := os.ReadFile(filepath.Join(dataDir, "status.json"))
+	if err != nil {
+		return nil, false
+	}
+	var p ProbeStatus
+	if json.Unmarshal(b, &p) != nil || p.UpdatedAt.IsZero() {
+		return nil, false
+	}
+	max := heartbeatMaxAge
+	if p.State == "passing" {
+		max = passMaxAge
+	}
+	return &p, p.State != "exited" && now.Sub(p.UpdatedAt) < max
+}
+
+// TransAmNow is the public view of a running Trans-Am, for the site-wide glow: only whether, until when, and whether
+// it is a test.
+type TransAmNow struct {
+	Active bool       `json:"active"`
+	Test   bool       `json:"test,omitempty"`
+	Style  string     `json:"style,omitempty"`
+	Until  *time.Time `json:"until,omitempty"`
+}
+
+// CurrentTransAm says whether a Trans-Am is running now, from a live loop's status (a stale one is ignored, with a
+// little slack past its end for the last pass to report).
+func CurrentTransAm(p *ProbeStatus, alive bool, now time.Time) TransAmNow {
+	if !alive || p == nil || p.TransAm == nil || !p.TransAm.Active || p.TransAm.Until == nil || now.After(p.TransAm.Until.Add(time.Minute)) {
+		return TransAmNow{}
+	}
+	return TransAmNow{Active: true, Test: p.TransAm.Test, Style: p.TransAm.Style, Until: p.TransAm.Until}
+}
+
 func ReadAdmin(dataDir, reqDir string, now time.Time) Admin {
 	a := Admin{Enabled: dirWritable(reqDir), Control: ReadControl(reqDir), Stop: readStop(dataDir)}
 	if reqDir != "" {
 		_, err := os.Stat(resumeFile(reqDir))
 		a.ResumePending = err == nil && a.Stop != ""
 	}
-	if b, err := os.ReadFile(filepath.Join(dataDir, "status.json")); err == nil {
-		var p ProbeStatus
-		if json.Unmarshal(b, &p) == nil && !p.UpdatedAt.IsZero() {
-			a.Probe = &p
-			max := heartbeatMaxAge
-			if p.State == "passing" {
-				max = passMaxAge
-			}
-			a.Alive = p.State != "exited" && now.Sub(p.UpdatedAt) < max
-		}
-	}
+	a.Probe, a.Alive = ReadProbe(dataDir, now)
 	if b, err := os.ReadFile(filepath.Join(dataDir, "launcher.json")); err == nil {
 		var l Launcher
 		if json.Unmarshal(b, &l) == nil {
